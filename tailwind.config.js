@@ -29,11 +29,14 @@ module.exports = {
       }
     },
     fontFamily: {
-      'sans': ['Nunito']
+      'sans': ['Nunito'],
+      'footer': ['Noto Sans']
     }
   },
   variants: {
     extend: {},
   },
-  plugins: [],
+  plugins: [
+    require('tailwindcss-elevation')(['responsive']),
+  ],
 }
