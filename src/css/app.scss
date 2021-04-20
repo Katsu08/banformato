@@ -1,0 +1,20 @@
+// app global css in SCSS form
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@200;400;800&display=swap');
+
+    body {
+        @apply bg-shadows-50
+    }
+
+    *{
+        @apply focus:outline-none
+    }
+
+    h1, h2, h3, h4, h5, h6{
+        @apply leading-normal;
+    }
+}
