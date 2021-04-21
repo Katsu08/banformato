@@ -3,9 +3,27 @@
     <main>
       <div class="selecter">
         <div class="selecter__container">
-          <q-icon class="selecter__icon selecter__icon--bank" :name="fasUniversity"/>
-          <div class="selecter__name-selected">Bancaribe</div>
+          <q-icon 
+            class="selecter__icon selecter__icon--bank" 
+            :name="fasUniversity"
+            @click="bankDropdown.show = true"
+          />
+          <div 
+            class="selecter__name-selected"
+            @click="bankDropdown.show = true"
+            >
+            {{bankDropdown.selected.name}}
+          </div>
           <q-icon class="selecter__icon selecter__icon--userTag" :name="fasUserTag"/>
+        </div>
+
+        <!-- Dropdown List -->
+        <div class="selecter__bank-list">
+          <BankDropdown
+            :show="bankDropdown.show"
+            @close="bankDropdown.show = false"
+            @select="selectBank($event)"
+          />
         </div>
       </div>
 
@@ -16,7 +34,11 @@
         <div class="textArea__action--bottomContainer">
           <span class="textArea__action--group">
             <q-icon :name="farHeart" class="textArea__action textArea__action--save"></q-icon>
-            <q-icon :name="fasCopy" class="textArea__action textArea__action--copy"></q-icon>
+            <q-icon 
+              :name="fasCopy" 
+              class="textArea__action textArea__action--copy"
+              @click="copy"
+            />
           </span>
         </div>
       </div>
@@ -30,10 +52,34 @@
 
 
 <script>
-import { fasUniversity, fasUserTag, farHeart, fasCopy, fasTimes } from '@quasar/extras/fontawesome-v5'
+import { fasUniversity, fasUserTag, farHeart, fasCopy, fasTimes } from '@quasar/extras/fontawesome-v5';
+import BankDropdown from 'components/TheBankDropdown';
 
 export default {
   name: 'PageIndex',
+  components:{
+    BankDropdown
+  },
+  data(){
+    return{
+      bankDropdown: {
+        selected: {
+          name: 'Selecciona un banco',
+          id: null
+        },
+        show: false
+      }
+    }
+  },
+  methods:{
+    selectBank(bank){
+      this.bankDropdown.selected = JSON.parse(JSON.stringify(bank));
+      this.bankDropdown.show = false;
+    },
+    copy(){
+      console.log({quasar: this.$quasar})
+    }
+  },
   created(){
     this.fasUniversity = fasUniversity;
     this.fasUserTag = fasUserTag;
@@ -47,14 +93,18 @@ export default {
 <style lang="scss">
 
   .selecter{
-    @apply bg-primary-50;
+    @apply bg-primary-50 relative;
 
     &__container{
       @apply grid content-center grid-cols-12 border-t h-14 border-b border-shadows-100 text-primary-200;
     }
 
     &__name-selected{
-      @apply text-2xl leading-10 block col-span-8 align-middle;
+      @apply text-2xl leading-10 block col-span-8 align-middle whitespace-nowrap overflow-ellipsis overflow-hidden;
+    }
+
+    &__bank-list{
+      @apply absolute top-0 z-10 w-full;
     }
 
     &__icon{
