@@ -23,8 +23,8 @@
             >
                 <div
                     v-if="show"
-                    class="absolute overflow-hidden transform -translate-x-1/2 -translate-y-1/2 border rounded-md border-primary-300 text-primary-300 bg-primary-50 overflow-ellipsis top-1/2 left-1/2"
-                    style="min-width: 80%; max-width:80%"
+                    class="absolute overflow-y-scroll transform -translate-x-1/2 -translate-y-1/2 border rounded-md border-primary-300 text-primary-300 bg-primary-50 overflow-ellipsis top-1/2 left-1/2"
+                    style="min-width: 80%; max-width:80%; max-height: 50%"
                 >
                     <!-- Modal title -->
                     <div class="pl-2 text-xl">

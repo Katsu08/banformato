@@ -14,7 +14,11 @@
             >
             {{bankDropdown.selected.name}}
           </div>
-          <q-icon class="selecter__icon selecter__icon--userTag" :name="fasUserTag"/>
+          <q-icon 
+            @click="contacts.contactListModal.show = true"
+            class="selecter__icon selecter__icon--userTag" 
+            :name="fasUserTag"
+          />
         </div>
 
         <!-- Dropdown List -->
@@ -32,6 +36,7 @@
           name="translator"
           resizable='false'
           class="textArea__field"
+          @input="texttoformate = textarea"
         />
         <!-- Actions Buttons -->
         <q-icon 
@@ -64,10 +69,6 @@
       </div>
     </main>
 
-    <pre>
-      {{contacts.list}}
-    </pre>
-
     <footer class="footer font-footer">
       <div class="footer__text--container">Developed By: <span class="footer__link">Katsu</span></div>
     </footer>
@@ -98,20 +99,70 @@
       </template>
     </ModalConfirmation>
 
+    <ModalConfirmation 
+      :show="contacts.contactListModal.show"
+      @clickOut="contacts.contactListModal.show = false"
+    >
+      <template #title>
+        <div class="modal__title contactList__title">
+          <q-icon 
+            class="modal__title--icon contactList__icon-title" 
+            :name="fasSearch"
+          />
+          <input 
+            class="modal__input contactList__input" 
+            type="text"
+            v-model="contacts.contactListModal.search"
+            placeholder="Buscar"
+          />
+          <q-icon 
+            @click="contacts.contactListModal.show = false"
+            class="modal__title--icon contactList__icon-close"
+            :name="fasTimes"
+          />
+        </div>
+      </template>
+
+      <template #content>
+        <div 
+          class="contactList__listItem"
+          v-for="contact in contactListItems"
+          :key="contact.id"
+          @click="copyContactInfo(contact)"
+        >
+          <q-icon
+            :name="farUserCircle"
+            class="contactList__icon-user"
+          />
+          <p class="contactList__listItem-title">
+            {{contact.name}}
+          </p>
+        </div>
+      </template>
+
+      <template #action>
+        <span>
+          
+        </span>
+      </template>
+    </ModalConfirmation>
+
   </div>
 </template>
 
 
 <script>
-import { fasAddressCard, fasUniversity, fasUserTag, farHeart, fasCopy, fasTimes, fasPaste } from '@quasar/extras/fontawesome-v5';
+import { fasSearch, fasAddressCard, fasUniversity, fasUserTag, farHeart, fasCopy, fasTimes, fasPaste, farUserCircle } from '@quasar/extras/fontawesome-v5';
 import BankDropdown from 'components/TheBankDropdown';
 import ModalConfirmation from 'components/TheModalConfirmation';
+import ContactList from 'components/TheContactList'
 
 export default {
   name: 'PageIndex',
   components:{
     BankDropdown,
-    ModalConfirmation
+    ModalConfirmation,
+    ContactList
   },
   data(){
     return{
@@ -131,6 +182,7 @@ export default {
         amount: ''
       },
       textarea: '',
+      texttoformate: '', //Guardará el texto que se piensa formatear, será manejada por el método "Copy", y "isDataComplete" verificará los datos en ella en vez del textarea, solo se usará para verificaciones y se borrará al final de isDataComplete
       regExp: {
         phone: /04\d{9}/,
         ci: /\bv?[1-9]\d{6,7}/i,
@@ -145,6 +197,10 @@ export default {
             name: '',
             pagomovil: '',
           }
+        },
+        contactListModal: {
+          show: false,
+          search: ''
         },
         list: [
           // {
@@ -164,8 +220,10 @@ export default {
       this.$q.localStorage.set('defaultBank', bank);
     },
     copy(text){
+      this.texttoformate = text;
+
       if(this.$q.cordova){
-        if(this.isSelectedBank && !this.isTextAreaEmpty){
+        if(this.isSelectedBank && !text == ''){
           cordova.plugins.clipboard.copy(this.formatedText(text), () => {
             if(!this.isDataComplete){
               this.$q.notify({
@@ -202,23 +260,54 @@ export default {
         const bank = (this.textarea.match(this.regExp.bank) || [''])[0].trim();
         const ci = (this.textarea.match(this.regExp.ci) || [''])[0].trim().replace(/v/i, '');
         const phone = (this.textarea.match(this.regExp.phone) || [''])[0].trim();
-        
+      
         if(bank.length > 0 && ci.length > 0 && phone.length > 0){
-          this.contacts.modal.newContactInfo.pagomovil = bank + ' ' + phone + ' ' + ci;
-          this.contacts.modal.show = true;
+          const pagomovil = bank + ' ' + phone + ' ' + ci;
+
+          // Verificamos si no existe ya un pagomovil igual a este
+          const result = this.contacts.list.filter(item => item.pagomovil == pagomovil);
+
+          if(result.length == 0){
+            this.contacts.modal.newContactInfo.pagomovil = pagomovil;
+            this.contacts.modal.show = true;
+          } else{
+            this.$q.notify({
+              message: 'El pagomovil que intentas registrar ya está en tu lista de contactos',
+              type: 'negative'
+            });
+          }
         }
       }
     },
     saveConfirm(){
-      if(this.isDataComplete && this.contacts.modal.newContactInfo.name.length > 2){
-        this.contacts.list.push({...this.contacts.modal.newContactInfo, id: this.contacts.list.length + 1});
-        this.$q.localStorage.set('contacts', this.contacts.list);
-      } else if(this.contacts.modal.newContactInfo.name.length <= 2){
+      // Verificamos que el nombre no exista ya
+      const name = this.contacts.modal.newContactInfo.name.trim();
+      const result = this.contacts.list.filter(item => item.name == name);
+
+      if(result.length == 0){
+        this.texttoformate = this.textarea;
+        if(this.isDataComplete && name.length > 2){
+          this.contacts.list.push({...this.contacts.modal.newContactInfo, id: this.contacts.list.length + 1});
+          this.$q.localStorage.set('contacts', this.contacts.list);
+          this.contacts.modal.show = false;
+  
+          this.$q.notify({
+            message: 'Se ha guardado el contacto éxitosamente',
+            type: 'positive'
+          })
+        } else if(this.contacts.modal.newContactInfo.name.length <= 2){
+          this.$q.notify({
+            message: 'El nombre debe contener más de 2 letras',
+            type: 'warning'
+          });
+        }
+      } else{
         this.$q.notify({
-          message: 'El nombre debe contener más de 2 letras',
-          type: 'warning'
+          message: 'Ya has guardado otro pagomovil con el mismo nombre',
+          type: 'negative'
         });
       }
+
     },
     saveCancel(){
       this.contacts.modal.newContactInfo = {
@@ -245,22 +334,26 @@ export default {
         return bankformato;
       }
     },
+    copyContactInfo(contact){
+      this.copy(contact.pagomovil);
+      this.contacts.contactListModal.show = false;
+    }
   },
   computed:{
     isDataComplete(){
       // CI, PHONE, BANKCODE
+      let isDataComplete =  this.regExp.phone.test(this.texttoformate) 
+                            && this.regExp.ci.test(this.texttoformate)
+                            && this.regExp.bank.test(this.texttoformate);
 
-      let isDataComplete =  this.regExp.phone.test(this.textarea) 
-                            && this.regExp.ci.test(this.textarea)
-                            && this.regExp.bank.test(this.textarea);
-
-
-      if(isDataComplete && !this.isSelectedBank){
+      if(isDataComplete && !this.isSelectedBank && !this.contacts.modal.show){
         this.$q.notify({
           message: 'Se detectaron los datos del pagomovil, ahora debes seleccionar un banco',
           type: 'info'
         });
       }
+
+      this.texttoformate = '';
 
       return isDataComplete;
     },
@@ -273,6 +366,26 @@ export default {
     isEmptyClipboard(){
       // DEV
       return false;
+    },
+    contactListItems(){
+
+      const search = this.contacts.contactListModal.search;
+
+      if(search != ''){
+        let expression = new RegExp(search, 'i')
+        
+        let result = this.contacts.list.filter(item => {
+          if(item.name.search(expression) !== -1){
+            return true;
+          } else{
+            return false;
+          }
+        });
+
+        return result;
+      } else{
+        return this.contacts.list;
+      }
     }
   },
   created(){
@@ -282,14 +395,19 @@ export default {
     this.fasCopy = fasCopy;
     this.fasTimes = fasTimes;
     this.fasPaste = fasPaste;
-    this.fasAddressCard = fasAddressCard
+    this.fasAddressCard = fasAddressCard;
+    this.fasSearch = fasSearch;
+    this.farUserCircle = farUserCircle;
   },
   mounted(){
-    const defaultBank = this.$q.localStorage.getItem('defaultBank');
+    debugger;
+    const defaultBank = this.$q.localStorage.getItem('defaultBank') || '';
 
-    this.selectBank(defaultBank)
+    if(defaultBank !== ''){
+      this.selectBank(defaultBank);
+    }
 
-    const contactList = this.$q.localStorage.getItem('contactList');
+    const contactList = this.$q.localStorage.getItem('contacts');
 
     this.contacts.list = contactList || [];
   }
@@ -393,6 +511,42 @@ export default {
     
     &__input{
       @apply border mt-2 rounded-lg border-primary-300 bg-primary-50 p-2 w-11/12;
+    }
+  }
+
+  .contactList{
+    &__title{
+      @apply grid grid-cols-6 w-11/12 mx-auto;
+    }
+
+    &__input{
+      @apply col-span-4 py-1 mt-0 w-full border-primary-100;
+    }
+
+    &__icon{
+      &-title{
+        @apply self-center place-self-start;
+      }
+
+      &-close{
+        @apply self-center place-self-end pr-2;
+      }
+
+      &-user{
+        @apply text-5xl;
+      }
+    }
+
+    &__listItem{
+      @apply my-3 text-primary-100 flex flex-row items-center text-2xl whitespace-nowrap overflow-ellipsis overflow-hidden;
+
+      &:last-child{
+        @apply my-0;
+      }
+    }
+
+    &__listItem-title{
+      @apply pl-3
     }
   }
 
